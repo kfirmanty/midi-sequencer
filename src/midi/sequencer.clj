@@ -18,10 +18,11 @@
 
 (defn send-message [note midi-dev]
   (let [receiver (-> midi-dev .getReceiver)
-        note-on (ShortMessage.)
+        channel 0
         timestamp -1
-        channel 0]
-    (.setMessage note-on ShortMessage/NOTE_ON channel (:pitch note) (:velocity note))
+        note-on (ShortMessage. ShortMessage/NOTE_ON channel (:pitch note) (:velocity note))
+        notes-off (ShortMessage. (+ 176 channel) 123 0)]
+    (.send receiver notes-off timestamp)
     (.send receiver note-on timestamp)))
 
 (defrecord Sequencer [steps synth-chan transformer]
