@@ -16,13 +16,18 @@
 (defn bpm-to-ms [bpm]
   (/ (* 60 1000) bpm))
 
+(defn send-off-all [midi-dev]
+  (let [receiver (-> midi-dev .getReceiver)
+        channel 0
+        timestamp -1
+        notes-off (ShortMessage. (+ 176 channel) 123 0)]
+    (.send receiver notes-off timestamp)))
+
 (defn send-message [note midi-dev]
   (let [receiver (-> midi-dev .getReceiver)
         channel 0
         timestamp -1
-        note-on (ShortMessage. ShortMessage/NOTE_ON channel (:pitch note) (:velocity note))
-        notes-off (ShortMessage. (+ 176 channel) 123 0)]
-    (.send receiver notes-off timestamp)
+        note-on (ShortMessage. ShortMessage/NOTE_ON channel (:pitch note) (:velocity note))]
     (.send receiver note-on timestamp)))
 
 (defrecord Sequencer [steps synth-chan transformer]
@@ -45,7 +50,10 @@
       (when @running (do
                        (doseq [sequencer sequencers]
                          (step sequencer count))
-                       (Thread/sleep @interval)
+                       (Thread/sleep (/ @interval 2))
+                       (doseq [sequencer sequencers]
+                         (send-off-all (:synth-chan sequencer)))
+                       (Thread/sleep (/ @interval 2))
                        (recur (inc count))))))
 
   (stop [this]
