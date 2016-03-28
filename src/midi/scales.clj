@@ -14,7 +14,7 @@
 (defn random-from-scale [scale-key]
   (let [scale (scale-key scales)
         step-num (int (* (Math/random) (count scale)))]
-      (+ base (-> scale (nth step-num) first))))
+    (+ base (-> scale (nth step-num) first))))
 
 (defn get-note [scale weight]
   (loop [step 0 sum-weight 0]
@@ -42,7 +42,7 @@
         prev-num (get-note-step-num prev scale)
         max-diff 2
         diff (Math/abs (- note-num prev-num))
-        diff-fn (if (< (- note-num prev-num) 0) - +)
+        diff-fn (if (< note-num prev-num) - +)
         new-step (if (> diff max-diff)
                    (diff-fn prev-num max-diff)
                    note-num)]
@@ -51,14 +51,34 @@
 (defn even-out [[a & r] scale-key]
   (let [scale (scale-key scales)]
     (loop [step-num 0 new-steps [a]]
-       (if (< step-num (count r))
+      (if (< step-num (count r))
         (recur (inc step-num)
                (conj new-steps
-                       (even-out-note (nth r step-num) (nth new-steps step-num) scale)))
+                     (even-out-note (nth r step-num) (nth new-steps step-num) scale)))
         new-steps))))
 
-(defn get-steps [len] (into [] (for [i (range len)]
-                                    {:note-on true
-                                     :pitch (random-weighted :phrygian-dominant)
-                                     :velocity 100
-                                     :num i})))
+(defn get-steps [len] (into [] (for [i (range (inc len))]
+                                 {:type :note-on
+                                  :pitch (random-weighted :phrygian-dominant)
+                                  :velocity 100
+                                  :length 4})))
+
+(defn gcd [a b acc]
+  (if (zero? b)
+    acc
+    (recur b (mod a b) (conj acc [a b]))))
+
+(defn fpass-euc [a b]
+  [(flatten [1 (repeat (- (/ a b) 1) 0)]) (repeat (mod a b) 0)])
+
+(defn e [a b]
+  (let [[fs lls] (fpass-euc a b)
+        ls (vector (first lls))
+        seqs (gcd b (mod a b) [])]
+    (if (empty? lls)
+      (repeat (/ a (count fs)) fs)
+      (loop [f fs l ls seqs seqs]
+        (let [[sf sl] (first seqs)]
+          (if (or (= sl 0) (= sl 1))
+            (concat (repeat sf f) (repeat sl l))
+            (recur (concat f l) f (rest seqs))))))))
